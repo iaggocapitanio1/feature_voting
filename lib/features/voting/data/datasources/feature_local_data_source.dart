@@ -1,6 +1,6 @@
-import 'package:feature_voting/features/voting/data/models/feature_model.dart';
+import 'package:feature_voting/core/db/database_helper.dart';
 
-import '../../domain/entities/feature.dart';
+import '../models/feature_model.dart';
 
 abstract class FeatureLocalDataSource {
   Future<List<FeatureModel>> getFeatures();
@@ -10,87 +10,58 @@ abstract class FeatureLocalDataSource {
 }
 
 class FeatureLocalDataSourceImpl implements FeatureLocalDataSource {
-  final List<FeatureModel> _features = [
-    FeatureModel(
-      id: '1',
-      title: 'Dark Mode Support',
-      description:
-          'Add dark mode theme to improve user experience in low-light environments.',
-      author: 'John Doe',
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      votes: 42,
-      voters: const ['user1', 'user2', 'user3'],
-      tags: const ['UI', 'Theme', 'Accessibility'],
-      status: FeatureStatus.inProgress,
-    ),
-    FeatureModel(
-      id: '2',
-      title: 'Push Notifications',
-      description:
-          'Implement push notifications for important updates and reminders.',
-      author: 'Jane Smith',
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      votes: 28,
-      voters: const ['user4', 'user5'],
-      tags: const ['Notifications', 'Mobile'],
-      status: FeatureStatus.pending,
-    ),
-    FeatureModel(
-      id: '3',
-      title: 'Offline Mode',
-      description: 'Allow users to access basic features when offline.',
-      author: 'Mike Johnson',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      votes: 15,
-      voters: const ['user6'],
-      tags: const ['Offline', 'Performance'],
-      status: FeatureStatus.pending,
-    ),
-    FeatureModel(
-      id: '4',
-      title: 'Export Data',
-      description:
-          'Add ability to export user data in various formats (CSV, JSON, PDF).',
-      author: 'Sarah Wilson',
-      createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-      votes: 8,
-      voters: const [],
-      tags: const ['Export', 'Data'],
-      status: FeatureStatus.pending,
-    ),
-  ];
+  final DatabaseHelper _databaseHelper;
+
+  FeatureLocalDataSourceImpl({required DatabaseHelper databaseHelper})
+    : _databaseHelper = databaseHelper;
 
   @override
   Future<List<FeatureModel>> getFeatures() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 500));
-    return List.from(_features);
+    try {
+      final featuresData = await _databaseHelper.getAllFeatures();
+      return featuresData
+          .map((data) => FeatureModel.fromDatabaseMap(data))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to load features: $e');
+    }
   }
 
   @override
   Future<void> addFeature(FeatureModel feature) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _features.add(feature);
+    try {
+      await _databaseHelper.insertFeature(feature.toDatabaseMap());
+    } catch (e) {
+      throw Exception('Failed to add feature: $e');
+    }
   }
 
   @override
   Future<FeatureModel> updateFeature(FeatureModel feature) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final index = _features.indexWhere((f) => f.id == feature.id);
-    if (index != -1) {
-      _features[index] = feature;
-      return feature;
+    try {
+      final result = await _databaseHelper.updateFeature(
+        feature.toDatabaseMap(),
+      );
+      if (result > 0) {
+        return feature;
+      } else {
+        throw Exception('Feature not found');
+      }
+    } catch (e) {
+      throw Exception('Failed to update feature: $e');
     }
-    throw Exception('Feature not found');
   }
 
   @override
   Future<FeatureModel?> getFeatureById(String id) async {
-    await Future.delayed(const Duration(milliseconds: 200));
     try {
-      return _features.firstWhere((feature) => feature.id == id);
-    } catch (e) {
+      final featureData = await _databaseHelper.getFeatureById(id);
+      if (featureData != null) {
+        return FeatureModel.fromDatabaseMap(featureData);
+      }
       return null;
+    } catch (e) {
+      throw Exception('Failed to get feature by id: $e');
     }
   }
 }

@@ -1,4 +1,6 @@
-import 'package:feature_voting/features/voting/domain/entities/feature.dart';
+import 'dart:convert';
+
+import '../../domain/entities/feature.dart';
 
 class FeatureModel extends Feature {
   const FeatureModel({
@@ -6,7 +8,6 @@ class FeatureModel extends Feature {
     required super.title,
     required super.description,
     required super.author,
-
     required super.createdAt,
     super.status,
     super.tags,
@@ -54,5 +55,34 @@ class FeatureModel extends Feature {
       votes: feature.votes,
       voters: feature.voters,
     );
+  }
+
+  // Database serialization methods
+  factory FeatureModel.fromDatabaseMap(Map<String, dynamic> map) {
+    return FeatureModel(
+      id: map['id'],
+      title: map['title'],
+      description: map['description'],
+      author: map['author'],
+      createdAt: DateTime.parse(map['createdAt']),
+      status: FeatureStatus.values[map['status']],
+      tags: List<String>.from(jsonDecode(map['tags'])),
+      votes: map['votes'],
+      voters: List<String>.from(jsonDecode(map['voters'])),
+    );
+  }
+
+  Map<String, dynamic> toDatabaseMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'author': author,
+      'createdAt': createdAt.toIso8601String(),
+      'status': status.index,
+      'tags': jsonEncode(tags),
+      'votes': votes,
+      'voters': jsonEncode(voters),
+    };
   }
 }
